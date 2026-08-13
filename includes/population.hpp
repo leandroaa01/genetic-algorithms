@@ -65,7 +65,7 @@ struct RunningOptions
   size_t popSelQnt{ 10 }; //> Representa a quantidade de indivíduos selecionados para a população
   size_t immigration{ 0 }; //> Representa a quantidade de indivíduos importados
   double mutationRate{ 0.40 }; //> Representa a taxa de mutação
-
+  unsigned seed{ 0 }; //> Semente para reprodutibilidade (0 -> random)
   bool printScore{ false }; //> Representa se deve imprimir a pontuação da melhor solução encontrada
   bool allHeuristic{ true }; //> Representa se deve utilizar todas as heurísticas para a geração da população inicial
   bool useGenNearestInsertion{ false }; //> Representa se deve utilizar a heurística de inserção mais próxima para a geração da população inicial
@@ -83,6 +83,7 @@ struct RunningOptions
     std::cout << "Population Size: " << populationSize << "\n";
     std::cout << "Generations: " << generations << "\n";
     std::cout << "Tmax: " << Tmax << "\n";
+    std::cout << "Seed: " << seed << "\n";
     std::cout << "Children Goal: " << childrenGoal << "\n";
     std::cout << "Breed Quantity: " << breedQnt << "\n";
     std::cout << "Population Selection Quantity: " << popSelQnt << "\n";
@@ -94,6 +95,7 @@ struct RunningOptions
     std::cout << "Active Memetic Algorithm: " << (activeMA ? "Yes" : "No") << "\n";
     std::cout << "Immigration: " << immigration << "\n";
     std::cout << "Test: " << (test ? "Yes" : "No") << "\n";
+    std::cout << "Seed: " << seed << "\n";
   }
 };
 
