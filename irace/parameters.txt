@@ -1,0 +1,11 @@
+# Name                Switch           Type    Domain
+populationSize        "-p "            i       (20, 200)
+generations           "-g "            i       (100, 1000)
+childrenGoal          "-c "            i       (20, 200)
+breedQnt              "-b "            i       (2, 20)
+popSelQnt             "-s "            i       (2, 20)
+mutationRate          "-m "            r       (0.01, 0.9)
+immigration           "-i "            i       (0, 20)
+activeMA              ""               c       ("-ama", "")
+useMahl               ""               c       ("-gm", "")
+tmax                  "-tx "           i       (30, 70)
