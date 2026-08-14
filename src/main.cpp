@@ -1,3 +1,4 @@
+
 /**
  * @file main.cpp
  * @author  Leandro Andrade(leandro.andrade.401@ufrn.edu.br)
@@ -112,11 +113,11 @@ void Run(const size_t popSize,
          const RunningOptions& options,
          const Population& basePop,
          std::string&& result = "",
-         vec<std::pair<int, Population>>&& times = {})
+         vec<std::pair<int, Population>>&& times = {},
+         const size_t executions = 20)
 {
-    times.resize(20);
-    times.assign(20, std::pair<int, Population>{ 0, Population{} });
-    for (size_t i{ 0 }; i < 20; ++i) 
+    times.assign(executions, std::pair<int, Population>{ 0, Population{} });
+    for (size_t i{ 0 }; i < executions; ++i) 
     {
         Population gaPop = basePop;
 
@@ -266,7 +267,6 @@ std::cout
  * @brief  Mensagem de ajuda para o usuário
  */
 inline raw_str HELP_MESSAGE = R"(Usage: Mahl [<options>] 
-Usage: Mahl [<options>] 
 
 Rendering simulation options:
   -h, --help                           Show this help message and exit
@@ -278,7 +278,8 @@ Rendering simulation options:
   -s <value>, --selection <value>      Set the population selection quantity (default: 10)
   -m <value>, --mutation <value>       Set the mutation rate (default: 0.40)
   -i <value>, --immigration <value>    Set the immigration quantity (default: 0)
-  -s, --seed <value>                   Set the random seed (default: 0)
+  --seed <value>                       Set the random seed (default: 0)
+  --irace                              Run a single execution for irace
   -ps, --print-score                   Print the best score every 25% generations
   -allHeuristic                        Use all heuristic methods for initial population generation (default: true)
   -gni, --useGenNearestInsertion       Use the nearest insertion heuristic for initial population generation
@@ -436,10 +437,12 @@ int main(int argc, char* argv[])
       }
     } else if (std::strcmp(argv[i], "-ps") == 0 or std::strcmp(argv[i], "--print-score") == 0) {
       options.printScore = true;
-    } else if (std::strcmp(argv[i], "-seed") == 0 or std::strcmp(argv[i], "--seed") == 0) {
+    } else if (std::strcmp(argv[i], "--seed") == 0) {
       if (i + 1 < argc) {
         options.seed = static_cast<unsigned>(std::stoul(argv[++i]));
       }
+    } else if (std::strcmp(argv[i], "--irace") == 0) {
+      options.irace = true;
     } else if (std::strcmp(argv[i], "-i") == 0 or std::strcmp(argv[i], "--immigration") == 0) {
       options.immigration = std::stoul(argv[++i]);
     } else if (std::strcmp(argv[i], "-allHeuristic") == 0) {
@@ -470,6 +473,12 @@ int main(int argc, char* argv[])
       options.test = true;
     }
   }
+
+  if (options.irace && options.test) {
+    std::cerr << "Erro: --irace e --test não podem ser usados simultaneamente.\n";
+    return 1;
+  }
+
   if(options.test)
   {
     vec2 dist(raw.size(), vec<double>(raw.size(), 0.0));
@@ -503,12 +512,32 @@ int main(int argc, char* argv[])
   gaPop.setImmigration(options.immigration);
   const size_t popSize = options.populationSize;
 
+  // Em execuções normais, seed=0 mantém o comportamento aleatório original.
+  // No modo irace, a seed fornecida pelo irace será aplicada aqui.
   if (options.seed != 0) {
     detail::tls_gen().seed(options.seed);
   }
 
-  Run(popSize, N, options, gaPop, std::move(result), std::move(times));
+  const size_t executions = options.irace ? 1 : 20;
 
+  Run(
+      popSize,
+      N,
+      options,
+      gaPop,
+      std::move(result),
+      std::move(times),
+      executions
+  );
+
+  // O irace precisa receber somente uma métrica numérica.
+  // Como o irace minimiza por padrão e nosso objetivo é maximizar score,
+  // retornamos o score com sinal invertido.
+  if (options.irace) {
+    const double cost = -times[0].second.getBest().score;
+    std::cout << std::fixed << std::setprecision(6) << cost << '\n';
+    return 0;
+  }
 
   std::cout << "Resultados das 20 execuções:\n";
   options.print();  
@@ -556,10 +585,5 @@ int main(int argc, char* argv[])
     PrintInfo(worsePop, options.Tmax);
   }
 
-  // Machine-readable metric for automated tuning (irace expects a single numeric value).
-  // irace minimizes by default; this program maximizes 'score', so we output the negative.
-  std::cout << "IRACE_RESULT: " << std::fixed << std::setprecision(6) << -bestPop.getBest().score << "\n";
-
-  
   return 0;
 }

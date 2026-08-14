@@ -457,36 +457,34 @@ Individual Population::generate(const size_t city_qnt)
  * @param city_qnt Número total de cidades da instância.
  * @param options Estrutura com opções de configuração da geração.
  */
-void Population::generate_individual(const size_t city_qnt, const RunningOptions& options)
+void Population::generate_individual(const size_t city_qnt,
+                                      const RunningOptions& options)
 {
   if (options.allHeuristic) {
-    auto f1 = std::async(std::launch::async, &Population::genNearestInsertion, this, city_qnt);
-    auto f2 = std::async(std::launch::async, &Population::genNearestNeighbor, this, city_qnt);
-    auto f3 = std::async(std::launch::async, &Population::generate, this, city_qnt);
+    Individual ind1 = genNearestInsertion(city_qnt);
+    Individual ind2 = genNearestNeighbor(city_qnt);
+    Individual ind3 = generate(city_qnt);
 
-    Individual ind1 = f1.get();
-    Individual ind2 = f2.get();
-    Individual ind3 = f3.get();
-    auto dist1 = ind1.fitness;
-    auto dist2 = ind2.fitness;
-    auto dist3 = ind3.fitness;
-    if (dist1 >= dist2 and dist1 >= dist3) {
-      this->population.push_back(ind1);
-    } else if (dist2 >= dist1 and dist2 >= dist3) {
-      this->population.push_back(ind2);
+    const double fitness1 = ind1.fitness;
+    const double fitness2 = ind2.fitness;
+    const double fitness3 = ind3.fitness;
+
+    if (fitness1 >= fitness2 && fitness1 >= fitness3) {
+      population.push_back(std::move(ind1));
+    } else if (fitness2 >= fitness1 && fitness2 >= fitness3) {
+      population.push_back(std::move(ind2));
     } else {
-      this->population.push_back(ind3);
+      population.push_back(std::move(ind3));
     }
+
   } else if (options.useGenNearestInsertion) {
-    Individual ind = genNearestInsertion(city_qnt);
-    this->population.push_back(ind);
+    population.push_back(genNearestInsertion(city_qnt));
+
   } else if (options.useGenNearestNeighbor) {
-    Individual ind = genNearestNeighbor(city_qnt);
-    this->population.push_back(ind);
+    population.push_back(genNearestNeighbor(city_qnt));
 
   } else {
-    Individual ind = generate(city_qnt);
-    this->population.push_back(ind);
+    population.push_back(generate(city_qnt));
   }
 }
 

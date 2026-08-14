@@ -73,6 +73,7 @@ struct RunningOptions
   bool useMahl{ false }; //> Representa se deve utilizar a heurística MAHL para a geração da população inicial
   bool activeMA{ false }; //> Representa se deve utilizar o Algoritmo Memético
   bool test{false }; //> Representa se deve executar em modo de teste
+  bool irace{ false };
 
   /**
    * @brief  Função para imprimir as opções de execução do Algoritmo Memético
