@@ -149,6 +149,8 @@ public:
  //> Construtor padrão da classe Population, inicializando a população, caminhos e lucros como vazios
   Population() : population(), paths(), profits(){};
   Population(const Population&) = default;
+  // population.hpp, dentro de "public:"
+  void tryGrow(Individual&);
 
   
   Individual generate(const size_t); 
@@ -192,7 +194,7 @@ public:
   void omit_a_point(Individual&);
   void replace_a_point(Individual&);
   void replaceBest(const Individual&);
-  
+  void ruinAndRecreate(Individual&, int ruinCount = 2);
   /**
    * @brief  Função para realizar a mutação de um indivíduo com base em uma função de mutação fornecida
    * @tparam mutation  Tipo da função de mutação a ser aplicada
