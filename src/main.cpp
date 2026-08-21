@@ -2,13 +2,13 @@
 /**
  * @file main.cpp
  * @author  Leandro Andrade(leandro.andrade.401@ufrn.edu.br)
- * @author  Heitor Campos(heitor.campos.711@ufrn.edu.br) 
+ * @author  Heitor Campos(heitor.campos.711@ufrn.edu.br)
  * @brief  Classe para execução do Algoritmo Memético
  * @version 0.1
  * @date 2026-07-05
- * 
+ *
  * @copyright Copyright (c) 2026
- * 
+ *
  */
 
 #include "population.hpp"
@@ -23,12 +23,13 @@
 #include <utility>
 #include <vector>
 
-using namespace pop; 
+using namespace pop;
 
-using vec3 = std::vector<std::tuple<double, double, double>>; //> alias para vetor de tuplas representando coordenadas e lucros
+using vec3 =
+  std::vector<std::tuple<double, double, double>>; //> alias para vetor de tuplas representando coordenadas e lucros
 using vec2 = std::vector<std::vector<double>>; //> alias para vetor de vetores representando distâncias entre pontos
 template<typename T>
-using vec = std::vector<T>; //> alias para vetor genérico
+using vec = std::vector<T>;  //> alias para vetor genérico
 using raw_str = const char*; //> alias para string constante
 
 /**
@@ -116,56 +117,48 @@ void Run(const size_t popSize,
          vec<std::pair<int, Population>>&& times = {},
          const size_t executions = 20)
 {
-    times.assign(executions, std::pair<int, Population>{ 0, Population{} });
-    for (size_t i{ 0 }; i < executions; ++i) 
-    {
-        Population gaPop = basePop;
+  times.assign(executions, std::pair<int, Population>{ 0, Population{} });
+  for (size_t i{ 0 }; i < executions; ++i) {
+    Population gaPop = basePop;
 
-     result += "Execução " + std::to_string(i + 1) + ": ";
+    result += "Execução " + std::to_string(i + 1) + ": ";
     auto start{ std::chrono::steady_clock::now() };
     for (size_t j = 0; j < popSize; ++j) {
       gaPop.generate_individual(N, options);
     }
 
-        gaPop.processAllFitness();
+    gaPop.processAllFitness();
 
-        const size_t generations = options.generations;
-        for (size_t g = 0; g < generations; ++g) {
-        gaPop.evolve(&Population::steadyState,
-                    &Population::tournament,
-                    &Population::random_choice,
-                    &Population::x1,
-                    &Population::memeticMut);
+    const size_t generations = options.generations;
+    for (size_t g = 0; g < generations; ++g) {
+      gaPop.evolve(&Population::steadyState,
+                   &Population::tournament,
+                   &Population::random_choice,
+                   &Population::x1,
+                   &Population::memeticMut);
 
-        if (g % 15 == 0) 
-            gaPop.imigrate(N);
-        
+      if (g % 15 == 0) gaPop.imigrate(N);
 
-        gaPop.processAllFitness();
+      gaPop.processAllFitness();
 
-        if (options.printScore) 
-            if (g % 25 == 0) 
-            {
-            const Individual& best = gaPop.getBest();
-            std::cout << "geracao " << g << " | melhor score = " << best.score << " | dist = " << best.dist << "\n";
-            }
-        
-
-        if (g % 50 == 0) 
-            gaPop.intensifyBest(20);
-        
+      if (options.printScore)
+        if (g % 25 == 0) {
+          const Individual& best = gaPop.getBest();
+          std::cout << "geracao " << g << " | melhor score = " << best.score << " | dist = " << best.dist << "\n";
         }
-        auto end{ std::chrono::steady_clock::now() };
-        auto diff{ end - start };
-        // auto diff_sec = std::chrono::duration_cast<std::chrono::seconds>(diff);
-        result += "Tempo de execução: " +
-                std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(diff).count() % 1000) + "ms\n";
 
-        auto current = std::chrono::duration_cast<std::chrono::milliseconds>(diff).count();
-        times[i].first = current;
-        times[i].second = gaPop;
+      if (g % 50 == 0) gaPop.intensifyBest(20);
     }
-    
+    auto end{ std::chrono::steady_clock::now() };
+    auto diff{ end - start };
+    // auto diff_sec = std::chrono::duration_cast<std::chrono::seconds>(diff);
+    result += "Tempo de execução: " +
+              std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(diff).count() % 1000) + "ms\n";
+
+    auto current = std::chrono::duration_cast<std::chrono::milliseconds>(diff).count();
+    times[i].first = current;
+    times[i].second = gaPop;
+  }
 }
 
 /**
@@ -175,92 +168,75 @@ void Run(const size_t popSize,
  */
 void improve(Population& gaPop, double Tmax = 85.0)
 {
-    //std::cout << "Starting Memetic Algorithm...\n";
+  // std::cout << "Starting Memetic Algorithm...\n";
 
-    auto start = std::chrono::steady_clock::now();
+  auto start = std::chrono::steady_clock::now();
 
-    Individual best = gaPop.getBest();
+  Individual best = gaPop.getBest();
 
-    const size_t used = Population::usedVertices(best);
+  const size_t used = Population::usedVertices(best);
 
-    bool improved = true;
+  bool improved = true;
 
-    while(improved)
-    {
-        improved = false;
+  while (improved) {
+    improved = false;
 
-        Individual bestNeighbor = best;
+    Individual bestNeighbor = best;
 
+    for (size_t i = 1; i < used - 1; ++i) {
+      for (size_t j = i + 1; j < used; ++j) {
+        Individual candidate = best;
 
-        for(size_t i = 1; i < used - 1; ++i)
-        {
-            for(size_t j = i + 1; j < used; ++j)
-            {
-                Individual candidate = best;
+        gaPop.swap(candidate, i, j);
 
-                gaPop.swap(candidate, i, j);
-
-                if(candidate.dist < bestNeighbor.dist and candidate.dist <= Tmax)
-                {
-                    bestNeighbor = std::move(candidate);
-                }
-            }
+        if (candidate.dist < bestNeighbor.dist and candidate.dist <= Tmax) {
+          bestNeighbor = std::move(candidate);
         }
-
-        if(bestNeighbor.dist < best.dist and bestNeighbor.dist <= Tmax)
-        {
-            std::cout << "swap dist: "
-                      << best.dist
-                      << " <-> "
-                      << bestNeighbor.dist
-                      << '\n';
-
-            best = std::move(bestNeighbor);
-            improved = true;
-        }
-
-        bestNeighbor = best;
-
-        for(size_t i = 1; i < used - 1; ++i)
-        {
-            for(size_t j = i + 1; j < used; ++j)
-            {
-                Individual candidate = best;
-
-                gaPop.shift(candidate, i, j);
-
-                if(candidate.dist < bestNeighbor.dist and candidate.dist <= Tmax)
-                {
-                    bestNeighbor = std::move(candidate);
-                }
-            }
-        }
-
-        if(bestNeighbor.dist < best.dist and bestNeighbor.dist <= Tmax)
-        {
-            std::cout << "shift dist: "
-                      << best.dist
-                      << " <-> "
-                      << bestNeighbor.dist
-                      << '\n';
-
-            best = std::move(bestNeighbor);
-            improved = true;
-        }
-    
+      }
     }
 
-    auto end = std::chrono::steady_clock::now();
+    if (bestNeighbor.dist < best.dist and bestNeighbor.dist <= Tmax) {
+      std::cout << "swap dist: " << best.dist << " <-> " << bestNeighbor.dist << '\n';
 
-   auto elapsed = end - start;
+      best = std::move(bestNeighbor);
+      improved = true;
+    }
 
-std::cout
-    << "MA time = "
-    << std::chrono::duration_cast<std::chrono::nanoseconds>(elapsed).count() << " ns ("
-    << std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count() << " us, "
-    << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count() << " ms)\n";
-    gaPop.replaceBest(best);
+    bestNeighbor = best;
 
+    for (size_t i = 1; i < used - 1; ++i) {
+      for (size_t j = i + 1; j < used; ++j) {
+        Individual candidate = best;
+
+        gaPop.shift(candidate, i, j);
+
+        if (candidate.dist < bestNeighbor.dist and candidate.dist <= Tmax) {
+          bestNeighbor = std::move(candidate);
+        }
+      }
+    }
+
+    if (bestNeighbor.dist < best.dist and bestNeighbor.dist <= Tmax) {
+      std::cout << "shift dist: " << best.dist << " <-> " << bestNeighbor.dist << '\n';
+
+      best = std::move(bestNeighbor);
+      improved = true;
+    }
+  }
+
+  double scoreBeforeGrow = best.score;
+  gaPop.tryGrow(best);
+  if (scoreBeforeGrow < best.score) {
+    std::cout << "grow score: " << scoreBeforeGrow << " -> " << best.score << '\n';
+  }
+
+  auto end = std::chrono::steady_clock::now();
+
+  auto elapsed = end - start;
+  std::cout << "MA time = " << std::chrono::duration_cast<std::chrono::nanoseconds>(elapsed).count() << " ns ("
+            << std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count() << " us, "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count() << " ms)\n";
+  gaPop.replaceBest(best);
 }
 
 /**
@@ -292,18 +268,18 @@ Rendering simulation options:
    When activating a heuristic, the last result will always be considered.
    )";
 
-
 /**
-  * @brief  Função para executar testes com diferentes valores de Tmax
-  *  O programa executará 20 execuções para cada valor de Tmax e imprimirá a melhor solução encontrada, juntamente com o tempo médio de execução.
-  *  O interval de Tmaxs é definido como { 5, 10, 20, 30, 40, 50, 60, 70, 80, 85 }.
-  *  O programa também permite ativar ou desativar o Algoritmo Memético (MA) para busca local, dependendo das opções fornecidas.
-  *  O programa também permite ativar ou desativar diferentes heurísticas para a geração da população inicial, dependendo das opções fornecidas.
-  * @param options  Representa as opções de execução do algoritmo
-  * @param raw  Representa as coordenadas dos pontos e os lucros associados a cada ponto
-  * @param dist  Representa a matriz de distâncias entre os pontos
-  * @param profits  Representa os lucros associados a cada ponto
-  */
+ * @brief  Função para executar testes com diferentes valores de Tmax
+ *  O programa executará 20 execuções para cada valor de Tmax e imprimirá a melhor solução encontrada, juntamente com o
+ * tempo médio de execução. O interval de Tmaxs é definido como { 5, 10, 20, 30, 40, 50, 60, 70, 80, 85 }. O programa
+ * também permite ativar ou desativar o Algoritmo Memético (MA) para busca local, dependendo das opções fornecidas. O
+ * programa também permite ativar ou desativar diferentes heurísticas para a geração da população inicial, dependendo
+ * das opções fornecidas.
+ * @param options  Representa as opções de execução do algoritmo
+ * @param raw  Representa as coordenadas dos pontos e os lucros associados a cada ponto
+ * @param dist  Representa a matriz de distâncias entre os pontos
+ * @param profits  Representa os lucros associados a cada ponto
+ */
 void test(RunningOptions& options, const vec3& raw, const vec2& dist, const vec<double>& profits)
 {
   vec<int> Tmaxs = { 5, 10, 20, 30, 40, 50, 60, 70, 80, 85 };
@@ -322,33 +298,28 @@ void test(RunningOptions& options, const vec3& raw, const vec2& dist, const vec<
   const size_t N = raw.size();
   const size_t popSize = options.populationSize;
 
-
-  for(int Tmax : Tmaxs)
-{
+  for (int Tmax : Tmaxs) {
     gaPop.setTmax(Tmax);
 
     std::string result;
-    vec<std::pair<int,Population>> times;
+    vec<std::pair<int, Population>> times;
 
     Run(popSize, N, options, gaPop, std::move(result), std::move(times));
     int media = 0;
 
     Population best = times.front().second;
     Population worse = times.front().second;
-    double averageScore{0};
+    double averageScore{ 0 };
 
-    for(const auto& exec : times)
-    {
-        media += exec.first;
+    for (const auto& exec : times) {
+      media += exec.first;
 
-        auto ind = exec.second.getBest();
-        
-        if(ind.fitness > best.getBest().fitness)
-            best = exec.second;
-        if(ind.fitness < worse.getBest().fitness)
-            worse = exec.second;
+      auto ind = exec.second.getBest();
 
-        averageScore += ind.score;
+      if (ind.fitness > best.getBest().fitness) best = exec.second;
+      if (ind.fitness < worse.getBest().fitness) worse = exec.second;
+
+      averageScore += ind.score;
     }
 
     media /= times.size();
@@ -365,16 +336,15 @@ void test(RunningOptions& options, const vec3& raw, const vec2& dist, const vec<
 
     std::cout << "Score médio = " << std::fixed << std::setprecision(2) << averageScore << "\n";
 
-    if(options.activeMA)
-    {
-        improve(best, Tmax);
-        improve(worse, Tmax);
+    if (options.activeMA) {
+      improve(best, Tmax);
+      improve(worse, Tmax);
 
-        std::cout << "A MELHOR solução pós MA:";
-        PrintInfo(best, Tmax);
+      std::cout << "A MELHOR solução pós MA:";
+      PrintInfo(best, Tmax);
 
-        std::cout << "A PIOR solução pós MA:";
-        PrintInfo(worse, Tmax);
+      std::cout << "A PIOR solução pós MA:";
+      PrintInfo(worse, Tmax);
     }
   }
 }
@@ -382,8 +352,9 @@ void test(RunningOptions& options, const vec3& raw, const vec2& dist, const vec<
 /**
  * @brief  Função principal do programa
  *  O programa executará o Algoritmo Genético (GA) e, opcionalmente, o Algoritmo Memético (MA) para busca local.
- *  O programa permite configurar diversos parâmetros de execução, como tamanho da população, número de gerações, taxa de mutação, entre outros.
- *  O programa também permite ativar ou desativar diferentes heurísticas para a geração da população inicial, dependendo das opções fornecidas.
+ *  O programa permite configurar diversos parâmetros de execução, como tamanho da população, número de gerações, taxa
+ * de mutação, entre outros. O programa também permite ativar ou desativar diferentes heurísticas para a geração da
+ * população inicial, dependendo das opções fornecidas.
  * @param argc  Representa o número de argumentos passados para o programa
  * @param argv  Representa os argumentos passados para o programa
  * @return int  Retorna 0 em caso de sucesso
@@ -398,7 +369,6 @@ int main(int argc, char* argv[])
                { 8.2, 19.9, 15 },  { 8.7, 17.7, 10 },  { 8.9, 13.6, 10 },  { 5.6, 11.1, 10 },  { 4.9, 18.9, 10 },
                { 7.3, 18.8, 10 },  { 11.2, 14.1, 0 } };
 
-
   RunningOptions options;
 
   for (int i{ 0 }; i < argc; ++i) {
@@ -408,7 +378,7 @@ int main(int argc, char* argv[])
     }
     // Add more option parsing logic here
     else if (std::strcmp(argv[i], "-p") == 0 or std::strcmp(argv[i], "--population") == 0) {
-      if (i + 1 < argc) { 
+      if (i + 1 < argc) {
         options.populationSize = std::stoul(argv[++i]);
       }
     } else if (std::strcmp(argv[i], "-g") == 0 or std::strcmp(argv[i], "--generations") == 0) {
@@ -468,8 +438,7 @@ int main(int argc, char* argv[])
       options.allHeuristic = false;
     } else if (std::strcmp(argv[i], "-ama") == 0 or std::strcmp(argv[i], "--activeMA") == 0) {
       options.activeMA = true;
-    }
-    else if (std::strcmp(argv[i], "-t") == 0 or std::strcmp(argv[i], "-test") == 0) {
+    } else if (std::strcmp(argv[i], "-t") == 0 or std::strcmp(argv[i], "-test") == 0) {
       options.test = true;
     }
   }
@@ -479,8 +448,7 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  if(options.test)
-  {
+  if (options.test) {
     vec2 dist(raw.size(), vec<double>(raw.size(), 0.0));
     vec<double> profits(raw.size());
     CalculeDistance(raw, dist, profits);
@@ -520,47 +488,41 @@ int main(int argc, char* argv[])
 
   const size_t executions = options.irace ? 1 : 20;
 
-  Run(
-      popSize,
-      N,
-      options,
-      gaPop,
-      std::move(result),
-      std::move(times),
-      executions
-  );
+  Run(popSize, N, options, gaPop, std::move(result), std::move(times), executions);
 
   // O irace precisa receber somente uma métrica numérica.
   // Como o irace minimiza por padrão e nosso objetivo é maximizar score,
   // retornamos o score com sinal invertido.
   if (options.irace) {
+    if (options.activeMA) {
+      improve(times[0].second, Tmax); // false: não suja o stdout que o irace lê
+    }
     const double cost = -times[0].second.getBest().score;
     std::cout << std::fixed << std::setprecision(6) << cost << '\n';
     return 0;
   }
 
   std::cout << "Resultados das 20 execuções:\n";
-  options.print();  
+  options.print();
   std::cout << result << "\n";
 
-
-  Population bestPop{times[0].second};
-  Population worsePop{times[0].second};
+  Population bestPop{ times[0].second };
+  Population worsePop{ times[0].second };
   auto mediaTime{ times[0].first };
-  double sumScores{times[0].second.getBest().score};
-  
+  double sumScores{ times[0].second.getBest().score };
+
   for (size_t i{ 1 }; i < times.size(); ++i) {
     mediaTime += times[i].first;
     double currentScore = times[i].second.getBest().score;
     sumScores += currentScore;
-    
+
     if (currentScore > bestPop.getBest().score) {
-          bestPop = times[i].second;
-      }
-      
-      if (currentScore < worsePop.getBest().score) {
-          worsePop = times[i].second;
-      }
+      bestPop = times[i].second;
+    }
+
+    if (currentScore < worsePop.getBest().score) {
+      worsePop = times[i].second;
+    }
   }
   mediaTime /= times.size();
   double mediaScores = sumScores / times.size();
