@@ -1129,16 +1129,34 @@ void Population::intensifyBest(int max_iter)
 
   bool improved = true;
   int count = 0;
+
   while (improved && count < max_iter) {
     improved = false;
     Individual backup = *it;
+
+    // ---- Passo 1: mutação memética normal (1 cidade por vez) ----
     memeticMut(*it);
     it->calc_score(paths, profits, endNode, Tmax, penaltyDelta);
+
     if (it->fitness > backup.fitness) {
       improved = true;
     } else {
-      *it = std::move(backup);
+      *it = backup; // volta pro estado original antes de tentar o passo 2
     }
+
+    // ---- Passo 2 (NOVO): se o passo 1 não achou nada, tenta uma
+    //      perturbação maior (2-3 cidades de uma vez) ----
+    if (!improved) {
+      Individual ruinCandidate = backup;
+      std::uniform_int_distribution<int> ruinSizeDist(2, 3);
+      ruinAndRecreate(ruinCandidate, ruinSizeDist(detail::tls_gen()));
+
+      if (ruinCandidate.fitness > backup.fitness) {
+        *it = std::move(ruinCandidate);
+        improved = true;
+      }
+    }
+
     count++;
   }
 }
@@ -1169,4 +1187,98 @@ void Population::imigrate(size_t city_qnt)
       population[population.size() - 1 - i] = genNearestInsertion(city_qnt);
   }
 }
+
+// population.cpp — substitui a versão anterior de tryGrow.
+// Diferença chave: em vez de reusar add_a_point (que sorteia UMA cidade
+// aleatória e só decide a posição), aqui avaliamos TODAS as cidades ainda
+// não visitadas em TODAS as posições possíveis, e inserimos a que tiver
+// o menor detour (aumento de distância) que ainda caiba em Tmax. Isso é
+// uma heurística de "cheapest feasible insertion" clássica.
+void Population::tryGrow(Individual& ind)
+{
+  bool grew = true;
+
+  while (grew) {
+    grew = false;
+    compact(ind);
+
+    size_t valid_count = 0;
+    std::vector<bool> present(paths->size(), false);
+    for (size_t p : ind.path) {
+      if (p != SIZE_MAX) {
+        present[p] = true;
+        ++valid_count;
+      }
+    }
+    if (valid_count == 0 || valid_count >= ind.path.size()) break;
+
+    std::vector<size_t> missing;
+    for (size_t c = 0; c < paths->size(); ++c) {
+      if (!present[c] && c != startNode && c != endNode) missing.push_back(c);
+    }
+    if (missing.empty()) break;
+
+    double bestDetour = std::numeric_limits<double>::max();
+    size_t bestCity = SIZE_MAX;
+    size_t bestPos = valid_count;
+
+    for (size_t city : missing) {
+      for (size_t i = 0; i < valid_count; ++i) {
+        size_t u = ind.path[i];
+        size_t v = (i + 1 < valid_count) ? ind.path[i + 1] : endNode;
+        double detour = (*paths)[u][city] + (*paths)[city][v] - (*paths)[u][v];
+
+        if (ind.dist + detour <= Tmax && detour < bestDetour) {
+          bestDetour = detour;
+          bestCity = city;
+          bestPos = i + 1;
+        }
+      }
+    }
+
+    if (bestCity != SIZE_MAX) {
+      for (size_t i = ind.path.size() - 1; i > bestPos; --i) {
+        ind.path[i] = ind.path[i - 1];
+      }
+      ind.path[bestPos] = bestCity;
+      ind.calc_score(paths, profits, endNode, Tmax, penaltyDelta);
+      grew = true;   // conseguiu inserir -> tenta de novo (pode caber mais uma)
+    }
+    // se bestCity == SIZE_MAX, nenhuma cidade cabe no orçamento restante -> para
+  }
+}
+void Population::ruinAndRecreate(Individual& child, int ruinCount)
+{
+  compact(child);
+  size_t used = usedVertices(child);
+
+  if (used <= 2) return; // não há o que arrancar além do start
+
+  std::vector<size_t> removablePositions;
+  for (size_t i = 1; i < used; ++i) {
+    removablePositions.push_back(i); // nunca inclui a posição 0 (start)
+  }
+
+  int actualRuin = std::min<int>(ruinCount, static_cast<int>(removablePositions.size()));
+  if (actualRuin <= 0) return;
+
+  std::shuffle(removablePositions.begin(), removablePositions.end(), detail::tls_gen());
+  std::vector<size_t> toRemove(removablePositions.begin(), removablePositions.begin() + actualRuin);
+
+  // remove do fim pro início pra não invalidar os índices já calculados
+  std::sort(toRemove.rbegin(), toRemove.rend());
+
+  for (size_t pos : toRemove) {
+    for (size_t i = pos; i + 1 < child.path.size(); ++i) {
+      child.path[i] = child.path[i + 1];
+    }
+    child.path[child.path.size() - 1] = SIZE_MAX;
+  }
+
+  child.calc_score(paths, profits, endNode, Tmax, penaltyDelta);
+
+  // reconstrução gulosa: reaproveita o tryGrow que já existe
+  tryGrow(child);
+}
+
 };
