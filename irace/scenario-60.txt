@@ -1,5 +1,5 @@
 parameterFile = "parameters.txt"
 trainInstancesDir = "./instances-60"
 targetRunner = "./targetRunner-60.sh"
-maxExperiments = 500
+maxExperiments = 5000
 parallel = 4

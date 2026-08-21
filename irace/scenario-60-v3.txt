@@ -1,0 +1,15 @@
+# scenario-60-v3.txt
+# Objetivo: encontrar config para Tmax=60 que seja >= 225 de forma ROBUSTA
+# (não só na melhor seed, mas na maioria das execuções), não apenas um valor
+# médio bom no relatório do irace.
+
+parameterFile = "parameters-60-v3.txt"
+trainInstancesDir = "./instances-60"
+targetRunner = "./targetRunner-60.sh"
+maxExperiments = 2000
+parallel = 4
+
+# --- Robustez: força o irace a testar cada config sobrevivente contra mais
+# seeds antes de eliminar/promover, em vez de decidir com poucas amostras.
+firstTest = 12
+eachTest = 3

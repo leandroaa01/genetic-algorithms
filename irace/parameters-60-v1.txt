@@ -1,0 +1,8 @@
+# Name                Switch           Type    Domain
+population    "--population "   i   (20,200)
+generations   "--generations "  i   (100,2000)
+children      "--children "     i   (10,100)
+breed         "--breed "        i   (1,20)
+selection     "--selection "    i   (1,20)
+mutation      "--mutation "     r   (0.05,1.00)
+immigration   "--immigration "  i   (0,20)

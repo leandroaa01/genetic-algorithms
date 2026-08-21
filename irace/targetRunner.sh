@@ -21,4 +21,5 @@ TMAX=60
     --irace \
     --seed "$SEED" \
     --tmax "$TMAX" \
+    -ama \
     "$@"
